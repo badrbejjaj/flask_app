@@ -1,7 +1,9 @@
 footer {
   z-index: 999;
 }
-
+.alert-messages {
+  padding-bottom: 30px;
+}
 .alert-container.show {
   display: block;
 }

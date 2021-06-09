@@ -1,6 +1,8 @@
 $(document).ready(function () {
-  var socket = io.connect("http://127.0.0.1:5000");
+  var socket = io.connect("http://webapp.local:5000");
   socket.on("changeAlert", function (data) {
+    console.log("🚀 ~ file: index.js ~ line 17 ~ getCurrentStatus ~ data.message", data.message)
+    console.log("🚀 ~ file: index.js ~ line 17 ~ getCurrentStatus ~ data.status", data.status)
     changeStatus(data.status, data.position, data.message);
   });
 });
@@ -14,6 +16,7 @@ function getCurrentStatus() {
     },
     success: function (data) {
       changeStatus(data.status, data.position, data.message);
+
     },
     error: function (data) {
       console.log(data);
@@ -27,9 +30,15 @@ function getCurrentStatus() {
 // handle change status buttons
 $(".change-status-button").on("click", function (e) {
   e.preventDefault();
+  data = {
+    "temp" : 0,
+    "gas" : 0,
+    "acc" : 0
+  }
   $.ajax({
-    url: "/change_status/" + $(this).data("status"),
-    type: "GET",
+    url: "/change_status",
+    type: "POST",
+    data,
     beforeSend() {
       $(".alert-container").addClass("alert-loading");
     },
@@ -44,36 +53,20 @@ $(".change-status-button").on("click", function (e) {
 
 // change the car status
 function changeStatus(status, position, message) {
-  switch (parseInt(status)) {
-    case 0:
-      // default map position (morocco)
-      const defaultPosition = { lat: 31.794525, lng: -7.0849336 };
+  generalStatus = Object.keys(status).filter((item) => parseInt(status[item]))
 
-      // init Map with the default position of the car
-      reloadMap(status, defaultPosition);
-
-      // init alert message and color
-      initAlertMessage(message, position);
-      break;
-    case 1 :
-    case 2:
-      // init Map with the position of the car
-      reloadMap(status, position);
-
-      // intit alert message and color
-      initAlertMessage(message, position);
-      break;
-    default:
-      console.error(status, position, message);
-      break;
+  if (generalStatus.length > 0) {
+    reloadMap(status, position);
+    initAlertMessage(message, position, false);
+  } else {
+    reloadMap(generalStatus.length, position);
+    initAlertMessage(message, position, true);
   }
 }
 
-function reloadMap(status = 0, position) {
-
-
+function reloadMap(status, position) {
   // marke a position
-  if (status != 0) {
+  if (status) {
     const map = new google.maps.Map(document.getElementById("map"), {
       zoom: 8,
       center: position,
@@ -92,12 +85,55 @@ function reloadMap(status = 0, position) {
   }
 }
 
-function initAlertMessage(message, position) {
-  $(".alert-heading").text(message.title);
-  $(".alert-description").text(message.description);
-  // remove recent alert class
-  $(".alert").attr('class', 'alert')
-  $(".alert").addClass("alert-" + message.alertClass);
-  $(".car-location #lat").text(position.lat);
-  $(".car-location #lng").text(position.lng);
+function initAlertMessage(message, position, isDefault) {
+  $('.alert-container').html(getAlertHtml(message, position, isDefault));
+}
+
+
+
+
+function getAlertHtml(message, position, isDefault) {
+
+  let alertHtml = getStatusContent(message);
+  alertHtml += !isDefault ? getLocationHtml(position) : '' ;
+
+  return alertHtml;
+}
+
+function getLocationHtml(position) {
+  return  `<div class="car-location">
+              <h3>Location</h3>
+              <ul class="list-group">
+                <li class="list-group-item list-group-item-info">
+                  <span class="font-weight-bold">Lat</span> =
+                  <span class="font-italic" id="lat">${position.lat}</span>
+                </li>
+                <li class="list-group-item list-group-item-info">
+                  <span class="font-weight-bold">Lng</span> =
+                  <span class="font-italic" id="lng"></span>${position.lng}</span>
+                </li>
+              </ul>
+            </div>`
+}
+
+function getStatusContent(messages) {
+  let statusContent = '<ul class="list-group">';
+  Object.keys(messages).forEach(message => {
+    statusContent += `<div class="alert alert-${messages[message].alertClass}">
+                        <h3 class="alert-heading">${messages[message].title}</h3>
+                        <p class="alert-description mb-5">${messages[message].description}</p></div>`;
+  });
+
+  return statusContent;
+}
+
+function getAlertClass(message) {
+  console.log("🚀 ~ file: index.js ~ line 156 ~ getAlertClass ~ message", message)
+  const isAcc = Object.keys(message).filter(item => item === 'acc');
+
+  if(isAcc.length) {
+    return message?.acc?.alertClass
+  }
+
+  return message?.temp?.alertClass ||  message?.gas?.alertClass;
 }

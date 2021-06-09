@@ -5,57 +5,84 @@ app = Flask(__name__)
 app.config['SECRET_KEY'] = 'mysecret'
 socketio = SocketIO(app, cors_allowed_origins='*')
 
-# get Message Text By Status
-def getMessage(status):
+def getStatusMessage(status = 'default'):
     message = {
-        # success green / danger red / warning yellow
-        "alertClass": "",
-        # Alert Title
-        "title": "",
-         # Alert Description
-        "description": ""
+        'default' : {
+            "alertClass": "success",
+            "title": "Lorem ipsum is placeholder text",
+            "description": "orem Ipsum is simply dummy text of the printing and typesetting industry."
+        },
+        'temp' : {
+            "alertClass": "warning",
+            "title": "Temperature is High",
+            "description": "orem Ipsum is simply dummy text of the printing and typesetting industry."
+        },
+        'acc' : {
+            "alertClass": "danger",
+            "title": "Voiture est sortie",
+            "description": "orem Ipsum is simply dummy text of the printing and typesetting industry."
+        },
+        'gas' : {
+            "alertClass": "warning",
+            "title": "Niveau de Gaz est tres haut",
+            "description": "orem Ipsum is simply dummy text of the printing and typesetting industry."
+        }
     }
-    print(type(status))
-    if status == '0':
-        message['title'] = "ALL GOOD"
-        message['description'] = "Whenever you need to, ALL GOOD be sure to use margin utilities to keep things nice and tidy."
-        message['alertClass'] = "success"
-    elif status == '1':
-        message['title'] = "ERROR"
-        message['description'] = "Whenever you need to, ERROR be sure to use margin utilities to keep things nice and tidy."
-        message['alertClass'] = "danger"
-    else:
-        message['title'] = "WARNING"
-        message['description'] = "Whenever you need to, WARNING be sure to use margin utilities to keep things nice and tidy."
-        message['alertClass'] = "warning"
-    
+
+    return message[status]
+
+# get Message Text By Status
+def getMessages(status):
+    message = {}
+
+    for s, value in status.items():
+        print(type(value))
+        if int(value):
+            message[s] = getStatusMessage(s)
+
+    if len (message) > 0:
+        return message
+
+    message['default'] = getStatusMessage()
     return message
 
-# get the current car position 
-def getCurrentPosition(status = 0):
-    defaultposition = { "lat": 31.794525, "lng":  -7.0849336 }
-    if status != 0:
-        defaultposition = { "lat": 31.794525, "lng":  -7.0849336 }
+# get the current car position
+def getDefaultPosition():
+    defaultposition = { 
+        "lat": 31.794525, 
+        "lng":  -7.0849336 
+    }
     return defaultposition
-
 
 @app.route("/")
 def index():
     return render_template('home/index.html')
 
-@app.route("/change_status/<status>")
-def changeStatus(status):
+@app.route("/change_status", methods=['POST'])
+def changeStatus():
+    print(request.form)
+    status = {
+        "temp" : request.form['temp'],
+        "acc" : request.form['acc'],
+        "gas" : request.form['gas']
+    }
+
+    location = {
+        "lat" : float(request.form['lat']),
+        "lng" : float(request.form['lng']),
+    }
+
     # get car localisation
-    position   = getCurrentPosition(status)
+    position = int(request.form['currentStatus']) and location or getDefaultPosition()
+
     # get message by status code
-    message = getMessage(status)
-    
+    message = getMessages(status)
+
     data = {
         "status" :  status,
         "message": message,
         "position" : position
     }
-
     # emit for update front data
     socketio.emit("changeAlert", data)
 
@@ -63,18 +90,23 @@ def changeStatus(status):
 
 @app.route("/current_status")
 def getCurrentStatus():
-    # TOODE - replaec by original get current status function
-    current = "0"
+
+    current = {
+        "temp" : 0,
+        "acc" : 0,
+        "gas" : 0
+    }
+
     # get car localisation
-    position   = getCurrentPosition(current)
+    position = getDefaultPosition()
     # get message by status code
-    message = getMessage(current)
+    message = getMessages(current)
+
     data = {
         "status" :  current,
         "message": message,
         "position" : position
     }
-    print(data)
 
     return jsonify(data)
 

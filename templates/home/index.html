@@ -5,15 +5,9 @@
 {% block body %}
     <div class="container-fluid mt-5">
         <div class="row">
-            <div class="col-md-6 " id="alert-message">
-                <div class="mb-5">
-                    <button data-status="0" class="btn change-status-button btn-success">Default Status</button>
-                    <button data-status="1" class="btn change-status-button btn-danger">Problem Status</button>
-                    <button data-status="2" class="btn change-status-button btn-warning">Warning Status</button>
-                </div>
+            <div class="col-md-6 alert-messages">
                 <h2 class="mb-3">Car Status</h2>
                 <div class="alert-container alert-loading show">
-                    {% include "home/alert.html" %}
                 </div>
             </div>
             <div class="col-md-6">
